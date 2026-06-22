@@ -1,0 +1,20 @@
+Crypto Price Report
+===================
+
+Latest Bitcoin price: $64,494.00 at 2026-06-22 20:22:52
+Latest Ethereum price: $1,736.36 at 2026-06-22 20:22:52
+
+Highest Recorded Prices
+-----------------------
+Bitcoin: $64,659.00
+Ethereum: $1,740.50
+
+Average Prices
+--------------
+Bitcoin: $64,602.00
+Ethereum: $1,739.09
+
+Daily Summary Statistics
+------------------------
+2026-06-22 | Bitcoin | Min: $64,494.00 | Max: $64,659.00 | Avg: $64,602.00
+2026-06-22 | Ethereum | Min: $1,736.36 | Max: $1,740.50 | Avg: $1,739.09

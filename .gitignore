@@ -4,7 +4,5 @@ __pycache__/
 .venv/
 venv/
 data/*.json
-reports/*.csv
-reports/*.txt
 !data/.gitkeep
 !reports/.gitkeep
