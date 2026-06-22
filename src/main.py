@@ -1,7 +1,7 @@
 from extract import fetch_crypto_data
 from validate import validate_data
 from transform import transform_data
-
+from load import insert_crypto_prices
 
 def main():
     data = fetch_crypto_data()
@@ -10,8 +10,8 @@ def main():
     print("Validation passed.")
 
     transformed_data = transform_data(data)
-
-    return transformed_data
+    insert_crypto_prices(transformed_data)
+    print("Data loaded successfully.")
 
 
 if __name__ == "__main__":

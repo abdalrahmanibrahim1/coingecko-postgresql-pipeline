@@ -17,8 +17,33 @@ def get_connection():
         
     return conn
 
+def insert_crypto_prices(rows):
+    conn = get_connection()
+    cursor = conn.cursor()
+    for row in rows:
+        cursor.execute("""
+            INSERT INTO crypto_prices (
+                coin_name,
+                symbol,
+                price_usd,
+                market_cap,
+                volume_24h,
+                snapshot_time,
+                ingestion_time
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s);
+        """,
+            (
+                row["coin_name"],
+                row["symbol"],
+                row["price_usd"],
+                row["market_cap"],
+                row["volume_24h"],
+                row["snapshot_time"],
+                row["ingestion_time"],
+            )
+        )
+    conn.commit()
+    conn.close()
 
 if __name__ == "__main__":
-    conn = get_connection()
-    print("Connection successful!")
-    conn.close()
+    pass
