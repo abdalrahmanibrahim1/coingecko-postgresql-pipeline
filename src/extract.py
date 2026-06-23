@@ -12,6 +12,6 @@ def fetch_crypto_data():
     )
 
     response = requests.get(url)
-    #response.raise_for_status()
+    response.raise_for_status()
 
     return response.json()

@@ -43,6 +43,7 @@ def insert_crypto_prices(rows):
             )
         )
     conn.commit()
+    cursor.close()
     conn.close()
 
 if __name__ == "__main__":
