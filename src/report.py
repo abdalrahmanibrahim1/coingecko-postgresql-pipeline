@@ -1,5 +1,10 @@
+import logging
 from src.load import get_connection
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+
 def get_latest_bitcoin_price():
     conn = get_connection()
     cursor = conn.cursor()    
@@ -143,6 +148,6 @@ def generate_report():
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text("\n".join(lines), encoding="utf-8")
 
-    print(f"Report generated: {report_path}")
+    logger.info("Report generated: %s", report_path)
 if __name__ == "__main__":
     generate_report()
