@@ -104,10 +104,14 @@ def generate_report():
     lines.append("")
 
     coin_name, price, snapshot_time = latest_bitcoin
-    lines.append(f"Latest {coin_name} price: ${price:,.2f} at {snapshot_time}")
+    lines.append(f"Latest {coin_name} price: ${price:,.2f}")
+    lines.append(f"API snapshot time: {snapshot_time}")
+
+    lines.append("")
 
     coin_name, price, snapshot_time = latest_ethereum
-    lines.append(f"Latest {coin_name} price: ${price:,.2f} at {snapshot_time}")
+    lines.append(f"Latest {coin_name} price: ${price:,.2f}")
+    lines.append(f"API snapshot time: {snapshot_time}")
 
     lines.append("")
     lines.append("Highest Recorded Prices")
