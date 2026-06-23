@@ -1,5 +1,3 @@
-from extract import fetch_crypto_data
-
 def validate_data(data):
     required_coins = {"bitcoin", "ethereum"}
     required_fields = ["usd", "usd_market_cap", "usd_24h_vol", "last_updated_at"]
@@ -37,8 +35,3 @@ def validate_data(data):
                 )
 
 
-
-if __name__=="__main__":
-    data = fetch_crypto_data()
-    
-    validate_data(data)
