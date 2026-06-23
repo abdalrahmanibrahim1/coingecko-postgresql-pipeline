@@ -1,8 +1,8 @@
-from extract import fetch_crypto_data
-from validate import validate_data
-from transform import transform_data
-from load import insert_crypto_prices
-from report import generate_report
+from src.extract import fetch_crypto_data
+from src.validate import validate_data
+from src.transform import transform_data
+from src.load import insert_crypto_prices
+from src.report import generate_report
 
 
 def main():

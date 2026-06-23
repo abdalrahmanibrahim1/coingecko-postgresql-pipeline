@@ -1,4 +1,4 @@
-from load import get_connection
+from src.load import get_connection
 from pathlib import Path
 def get_latest_bitcoin_price():
     conn = get_connection()
