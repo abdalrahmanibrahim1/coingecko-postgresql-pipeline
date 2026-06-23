@@ -1,5 +1,3 @@
-from extract import fetch_crypto_data
-from validate import validate_data
 from datetime import datetime
 def transform_data(data):
     rows = []
@@ -27,10 +25,3 @@ def transform_data(data):
         rows.append(row)
 
     return rows
-if __name__ == "__main__":
-    data = fetch_crypto_data()
-    validate_data(data)
-    transformed = transform_data(data)
-    for i in transformed:
-        print(i)
-    
