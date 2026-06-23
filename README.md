@@ -1,8 +1,8 @@
 # CoinGecko PostgreSQL ETL Pipeline
 
-A Python data engineering project that extracts cryptocurrency market data from the CoinGecko API, validates and transforms the response, loads historical snapshots into PostgreSQL, and generates SQL-based reports.
+A Dockerized Python data engineering project that extracts cryptocurrency market data from the CoinGecko API, validates and transforms the response, loads historical price snapshots into PostgreSQL, and generates SQL-based reports.
 
-This project demonstrates a small but realistic ETL workflow:
+This project demonstrates a complete beginner-to-junior level ETL workflow:
 
 ```text
 CoinGecko API → JSON Extraction → Validation → Transformation → PostgreSQL → SQL Reports
@@ -23,11 +23,11 @@ For each coin, the pipeline stores:
 * symbol
 * USD price
 * market cap
-* 24-hour volume
+* 24-hour trading volume
 * API snapshot time
-* ingestion time
+* pipeline ingestion time
 
-Each pipeline run inserts a new snapshot into PostgreSQL, allowing historical price tracking over time.
+Each run inserts a new snapshot into PostgreSQL, allowing the database to build historical price records over time.
 
 ---
 
@@ -42,6 +42,7 @@ Each pipeline run inserts a new snapshot into PostgreSQL, allowing historical pr
 * psycopg2
 * python-dotenv
 * requests
+* Python logging
 
 ---
 
@@ -76,37 +77,11 @@ coingecko-postgresql-pipeline/
 
 ---
 
-## Database Schema
-
-The pipeline loads data into the `crypto_prices` table.
-
-```sql
-CREATE TABLE IF NOT EXISTS crypto_prices (
-    id SERIAL PRIMARY KEY,
-    coin_name VARCHAR(50) NOT NULL,
-    symbol VARCHAR(20) NOT NULL,
-    price_usd NUMERIC NOT NULL,
-    market_cap NUMERIC NOT NULL,
-    volume_24h NUMERIC NOT NULL,
-    snapshot_time TIMESTAMP NOT NULL,
-    ingestion_time TIMESTAMP NOT NULL
-);
-```
-
-### Time Columns
-
-`timestamp_time` and `ingestion_time` are intentionally different concepts:
-
-* `snapshot_time`: when CoinGecko says the market data was last updated
-* `ingestion_time`: when this pipeline inserted the row into PostgreSQL
-
----
-
-## Pipeline Steps
+## Pipeline Flow
 
 ### 1. Extract
 
-`src/extract.py` sends a request to the CoinGecko API and returns JSON market data for Bitcoin and Ethereum.
+`src/extract.py` calls the CoinGecko API and retrieves market data for Bitcoin and Ethereum.
 
 The extraction step uses:
 
@@ -116,17 +91,23 @@ response.raise_for_status()
 
 to fail clearly if the API request is unsuccessful.
 
+---
+
 ### 2. Validate
 
-`src/validate.py` validates the API response before loading it.
+`src/validate.py` checks the API response before any data is transformed or loaded.
 
-Validation checks include:
+Validation rules include:
 
-* top-level response must be a dictionary
+* response must be a dictionary
 * expected coins must be exactly Bitcoin and Ethereum
 * each coin must contain all required fields
-* values must be numeric
+* field values must be numeric
 * numeric values must not be negative
+
+This prevents invalid API responses from reaching the database.
+
+---
 
 ### 3. Transform
 
@@ -146,9 +127,15 @@ Example transformed row:
 }
 ```
 
+---
+
 ### 4. Load
 
 `src/load.py` connects to PostgreSQL and inserts the transformed rows into the `crypto_prices` table.
+
+Each pipeline run appends new rows instead of replacing old data, allowing the table to store historical snapshots.
+
+---
 
 ### 5. Report
 
@@ -168,14 +155,67 @@ The report includes:
 
 ---
 
+## Database Schema
+
+The pipeline loads data into the `crypto_prices` table.
+
+```sql
+CREATE TABLE IF NOT EXISTS crypto_prices (
+    id SERIAL PRIMARY KEY,
+    coin_name VARCHAR(50) NOT NULL,
+    symbol VARCHAR(20) NOT NULL,
+    price_usd NUMERIC NOT NULL,
+    market_cap NUMERIC NOT NULL,
+    volume_24h NUMERIC NOT NULL,
+    snapshot_time TIMESTAMP NOT NULL,
+    ingestion_time TIMESTAMP NOT NULL
+);
+```
+
+### Time Columns
+
+The project intentionally stores two different timestamps:
+
+| Column           | Meaning                                              |
+| ---------------- | ---------------------------------------------------- |
+| `snapshot_time`  | When CoinGecko says the market data was last updated |
+| `ingestion_time` | When this pipeline inserted the row into PostgreSQL  |
+
+This distinction is important because API data time and pipeline run time are not always the same.
+
+---
+
+## Logging
+
+The pipeline uses Python’s built-in `logging` module instead of plain `print()` statements.
+
+Logs show pipeline progress with timestamps and severity levels, such as:
+
+```text
+2026-06-23 18:22:41 | INFO | __main__ | Starting crypto ETL pipeline.
+2026-06-23 18:22:42 | INFO | __main__ | Data extracted successfully.
+2026-06-23 18:22:42 | INFO | __main__ | Validation passed.
+2026-06-23 18:22:42 | INFO | __main__ | Data loaded successfully.
+```
+
+If the pipeline fails, the error is logged with a traceback using:
+
+```python
+logger.exception(...)
+```
+
+This makes failures easier to debug and makes the project closer to a real production-style data pipeline.
+
+---
+
 ## Running with Docker
 
 Docker is the recommended way to run this project.
 
-The Docker setup creates:
+The Docker setup creates two containers:
 
-* a PostgreSQL container
-* a Python ETL app container
+* `db`: PostgreSQL database
+* `app`: Python ETL pipeline
 
 ### 1. Build and run the pipeline
 
@@ -185,7 +225,7 @@ From the project root:
 docker compose up --build
 ```
 
-The Python app will:
+The app will:
 
 1. wait for PostgreSQL to become healthy
 2. run the ETL pipeline
@@ -199,11 +239,13 @@ The app container exiting with code `0` is expected because this is a batch ETL 
 
 ### 2. Check the generated report
 
+Linux/macOS/Git Bash:
+
 ```bash
 cat reports/crypto_report.txt
 ```
 
-On Windows PowerShell:
+Windows PowerShell:
 
 ```powershell
 Get-Content reports/crypto_report.txt
@@ -237,13 +279,13 @@ Exit PostgreSQL:
 docker compose down
 ```
 
-To fully reset the Docker database volume:
+To fully reset the Docker PostgreSQL database volume:
 
 ```bash
 docker compose down -v
 ```
 
-Use `-v` only when you want to delete the Docker PostgreSQL data and start from a fresh database.
+Use `-v` only when you want to delete the Docker database data and start fresh.
 
 ---
 
@@ -321,8 +363,8 @@ The tests check that:
 * missing fields are rejected
 * non-numeric values are rejected
 * negative values are rejected
-* transformed rows contain the expected fields
-* timestamps are converted into Python `datetime` objects
+* transformed rows contain the expected database-ready fields
+* API timestamps are converted into Python `datetime` objects
 
 ---
 
@@ -380,20 +422,24 @@ This project demonstrates:
 * PostgreSQL loading
 * SQL reporting
 * Dockerized development
+* Docker Compose with multiple services
+* PostgreSQL schema initialization
 * environment variable management
 * Python package-style imports
 * unit testing with pytest
-* basic data engineering project structure
+* logging for pipeline observability
+* clean data engineering project structure
 
 ---
 
 ## Future Improvements
 
-Possible next improvements:
+Possible future improvements:
 
 * schedule the pipeline to run automatically
 * add integration tests for PostgreSQL loading
-* add logging instead of print statements
 * export reports as CSV
 * load data into a data warehouse
 * deploy the pipeline to a cloud environment
+
+These are intentionally left as future improvements because this project focuses on building a clean API-to-PostgreSQL ETL pipeline.
