@@ -6,5 +6,6 @@ CREATE TABLE IF NOT EXISTS crypto_prices (
     market_cap NUMERIC NOT NULL,
     volume_24h NUMERIC NOT NULL,
     snapshot_time TIMESTAMP NOT NULL,
-    ingestion_time TIMESTAMP NOT NULL
+    ingestion_time TIMESTAMP NOT NULL,
+    CONSTRAINT unique_coin_snapshot UNIQUE (coin_name, snapshot_time)
 );

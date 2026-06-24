@@ -36,7 +36,8 @@ def insert_crypto_prices(rows):
     cursor = conn.cursor()
 
     for row in rows:
-        # Use parameterized SQL placeholders to safely pass values into PostgreSQL.
+        # Use parameterized SQL to pass values safely and let psycopg2 handle type conversion.
+        # ON CONFLICT skips duplicate coin/snapshot pairs, making the load incremental.
         cursor.execute("""
             INSERT INTO crypto_prices (
                 coin_name,
@@ -46,7 +47,8 @@ def insert_crypto_prices(rows):
                 volume_24h,
                 snapshot_time,
                 ingestion_time
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s);
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (coin_name, snapshot_time) DO NOTHING;
         """,
             (
                 row["coin_name"],

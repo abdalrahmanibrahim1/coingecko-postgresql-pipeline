@@ -121,6 +121,32 @@ def format_datetime(value):
     """Format database timestamps without microseconds for report output."""
     return value.strftime("%Y-%m-%d %H:%M:%S")
 
+def get_recent_snapshot():
+    """
+    Return the most recent stored crypto price snapshots.
+
+    This helps prove the pipeline stores historical data over time.
+    Results are ordered by ingestion_time so the newest pipeline-loaded
+    records appear first.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    # Show the latest stored rows so users can inspect historical snapshots
+    # created by previous pipeline runs.
+    cursor.execute("""
+        SELECT coin_name, price_usd, snapshot_time, ingestion_time
+        FROM crypto_prices
+        ORDER BY ingestion_time DESC
+        LIMIT 10;
+    """
+    )
+
+    result = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    return result
+
 def generate_report():
     """
     Generate a human-readable crypto price report from PostgreSQL query results.
@@ -133,6 +159,7 @@ def generate_report():
     highest_prices = get_highest_prices_by_coin()
     average_prices = get_average_prices_by_coin()
     daily_stats = get_daily_statistics()
+    recent_snapshot = get_recent_snapshot()
 
     lines = []
 
@@ -178,6 +205,16 @@ def generate_report():
             f"Avg: ${avg_price:,.2f}"
         )
 
+    lines.append("")
+    lines.append("Recent Historical Snapshots")
+    lines.append("------------------------")
+
+    for coin_name, price_usd, snapshot_time, ingestion_time in recent_snapshot:
+        lines.append(
+            f"{snapshot_time} | {coin_name} | "
+            f"{price_usd} | Ingested: {format_datetime(ingestion_time)}"
+        )
+    
     report_path = Path("reports/crypto_report.txt")
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text("\n".join(lines), encoding="utf-8")
