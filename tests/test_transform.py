@@ -1,6 +1,9 @@
 from datetime import datetime
+
 import pytest
+
 from src.transform import transform_data
+
 
 @pytest.fixture
 def valid_api_data():
@@ -23,16 +26,19 @@ def valid_api_data():
         },
     }
 
+
 def test_transform_data_returns_list(valid_api_data):
-    """ 
+    """
     transform_data should return a list because each item represents
-    one database-ready row. """
+    one database-ready row.
+    """
     rows = transform_data(valid_api_data)
 
     assert isinstance(rows, list)
 
+
 def test_transform_data_returns_two_rows(valid_api_data):
-    """ 
+    """
     The API response contains two coins, so the transformation should
     produce two rows.
     """
@@ -40,13 +46,14 @@ def test_transform_data_returns_two_rows(valid_api_data):
 
     assert len(rows) == 2
 
+
 def test_transform_data_bitcoin_row(valid_api_data):
-    """ 
-    Confirm that the Bitcoin API data is mapped to the expected database 
-    fields and converted timestamp types. 
+    """
+    Confirm that the Bitcoin API data is mapped to the expected database
+    fields and converted timestamp types.
     """
     rows = transform_data(valid_api_data)
-    bitcoin_row = next(row for row in rows if row["symbol"] =="BTC")
+    bitcoin_row = next(row for row in rows if row["symbol"] == "BTC")
 
     assert bitcoin_row["coin_name"] == "Bitcoin"
     assert bitcoin_row["symbol"] == "BTC"
@@ -56,8 +63,9 @@ def test_transform_data_bitcoin_row(valid_api_data):
     assert isinstance(bitcoin_row["snapshot_time"], datetime)
     assert isinstance(bitcoin_row["ingestion_time"], datetime)
 
+
 def test_transform_data_ethereum_row(valid_api_data):
-    """ 
+    """
     Confirm that the Ethereum API data is mapped to the expected database
     fields and converted timestamp types.
     """
