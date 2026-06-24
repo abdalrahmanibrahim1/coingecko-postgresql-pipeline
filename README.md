@@ -27,7 +27,23 @@ For each coin, the pipeline stores:
 * API snapshot time
 * pipeline ingestion time
 
-Each run inserts a new snapshot into PostgreSQL, allowing the database to build historical price records over time.
+Each run inserts new price snapshots into PostgreSQL. This allows the database to build historical price records over time instead of only storing the latest API response.
+
+The pipeline also uses incremental loading logic to avoid inserting duplicate coin/snapshot pairs.
+
+---
+
+## Key Features
+
+* Extracts live cryptocurrency data from the CoinGecko API
+* Validates API responses before loading data
+* Transforms nested JSON into database-ready rows
+* Loads historical snapshots into PostgreSQL
+* Prevents duplicate snapshots using a unique database constraint
+* Generates SQL-based text reports
+* Includes unit tests for validation and transformation logic
+* Runs locally or fully inside Docker
+* Uses Python logging for pipeline observability
 
 ---
 
@@ -133,7 +149,15 @@ Example transformed row:
 
 `src/load.py` connects to PostgreSQL and inserts the transformed rows into the `crypto_prices` table.
 
-Each pipeline run appends new rows instead of replacing old data, allowing the table to store historical snapshots.
+The load step uses parameterized SQL queries so values are passed safely into PostgreSQL.
+
+It also uses incremental loading logic:
+
+```sql
+ON CONFLICT (coin_name, snapshot_time) DO NOTHING
+```
+
+This means that if the same coin and API snapshot time already exist, the row is skipped instead of being inserted again.
 
 ---
 
@@ -152,6 +176,7 @@ The report includes:
 * highest recorded price by coin
 * average price by coin
 * daily summary statistics
+* recent historical snapshots
 
 ---
 
@@ -168,7 +193,8 @@ CREATE TABLE IF NOT EXISTS crypto_prices (
     market_cap NUMERIC NOT NULL,
     volume_24h NUMERIC NOT NULL,
     snapshot_time TIMESTAMP NOT NULL,
-    ingestion_time TIMESTAMP NOT NULL
+    ingestion_time TIMESTAMP NOT NULL,
+    CONSTRAINT unique_coin_snapshot UNIQUE (coin_name, snapshot_time)
 );
 ```
 
@@ -182,6 +208,32 @@ The project intentionally stores two different timestamps:
 | `ingestion_time` | When this pipeline inserted the row into PostgreSQL  |
 
 This distinction is important because API data time and pipeline run time are not always the same.
+
+### Incremental Loading
+
+The database has a unique constraint on:
+
+```sql
+coin_name, snapshot_time
+```
+
+This prevents duplicate snapshots for the same coin.
+
+For example, this is allowed:
+
+```text
+Bitcoin  | 2026-06-23 14:41:33
+Ethereum | 2026-06-23 14:41:33
+```
+
+But this duplicate is not allowed:
+
+```text
+Bitcoin | 2026-06-23 14:41:33
+Bitcoin | 2026-06-23 14:41:33
+```
+
+The pipeline handles this safely using `ON CONFLICT DO NOTHING`, so duplicate snapshots are skipped instead of causing the pipeline to fail.
 
 ---
 
@@ -265,6 +317,14 @@ Then run:
 SELECT * FROM crypto_prices;
 ```
 
+To inspect historical snapshots:
+
+```sql
+SELECT coin_name, price_usd, snapshot_time, ingestion_time
+FROM crypto_prices
+ORDER BY ingestion_time DESC;
+```
+
 Exit PostgreSQL:
 
 ```sql
@@ -345,6 +405,8 @@ python -m src.main
 
 ## Running Tests
 
+This project includes unit tests written with `pytest`.
+
 Run tests from the project root:
 
 ```bash
@@ -356,15 +418,27 @@ Current test coverage includes:
 * validation logic
 * transformation logic
 
-The tests check that:
+The validation tests check that:
 
 * valid API data passes validation
-* invalid API structures fail validation
+* non-dictionary responses are rejected
+* unexpected coin keys are rejected
+* missing coin keys are rejected
+* coin values must be dictionaries
 * missing fields are rejected
 * non-numeric values are rejected
 * negative values are rejected
-* transformed rows contain the expected database-ready fields
+
+The transformation tests check that:
+
+* transformed output is returned as a list
+* one row is created per coin
+* Bitcoin fields are mapped correctly
+* Ethereum fields are mapped correctly
 * API timestamps are converted into Python `datetime` objects
+* each row receives an `ingestion_time`
+
+Testing is included because validation and transformation are core pipeline logic. If those steps break, bad data could reach the database.
 
 ---
 
@@ -396,6 +470,11 @@ Daily Summary Statistics
 ------------------------
 2026-06-23 | Bitcoin | Min: $62,507.00 | Max: $62,507.00 | Avg: $62,507.00
 2026-06-23 | Ethereum | Min: $1,663.36 | Max: $1,663.36 | Avg: $1,663.36
+
+Recent Historical Snapshots
+---------------------------
+2026-06-23 14:41:33 | Bitcoin | $62,507.00 | Ingested: 2026-06-23 14:41:36
+2026-06-23 14:41:33 | Ethereum | $1,663.36 | Ingested: 2026-06-23 14:41:36
 ```
 
 ---
@@ -420,6 +499,9 @@ This project demonstrates:
 * JSON validation
 * data transformation
 * PostgreSQL loading
+* incremental loading
+* duplicate prevention with database constraints
+* historical snapshot storage
 * SQL reporting
 * Dockerized development
 * Docker Compose with multiple services
