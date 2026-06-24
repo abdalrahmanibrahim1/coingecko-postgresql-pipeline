@@ -2,15 +2,25 @@ services:
   db:
     image: postgres:18
     container_name: crypto-postgres
+
+    # Create the Docker PostgreSQL database using these default values.
     environment:
       POSTGRES_DB: ${DB_NAME:-crypto_db}
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+
+    # Expose Docker Postgres on localhost:5433 to avoid conflict 
+    # with a local PostgreSQL installation using port 5432 
     ports:
       - "5433:5432"
     volumes:
+      # Persist database data between container runs.
       - postgres_data:/var/lib/postgresql
+
+      # Run schema.sql automatically when the Docker database is first created. 
       - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+
+    # Check when PostgreSQL is ready to accept connections.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-crypto_db}"]
       interval: 5s
@@ -20,16 +30,22 @@ services:
   app:
     build: .
     container_name: crypto-etl-app
+
+    # Wait for PostgreSQL to be healthy before running the ETL pipeline.
     depends_on:
       db:
         condition: service_healthy
+
     environment:
+    # Inside Docker, the database host is the Compose service name: db.
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-crypto_db}
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      
     volumes:
+    # Write generated reports back to the local reports folder.
       - ./reports:/app/reports
     command: python -m src.main
 

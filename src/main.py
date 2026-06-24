@@ -7,6 +7,8 @@ from src.load import insert_crypto_prices
 from src.report import generate_report
 
 
+# Configure application-wide logging so pipeline runs show timestamps,
+# severity levels, module names, and readable progress messages.
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -16,6 +18,16 @@ logger = logging.getLogger(__name__)
 
 
 def main():
+    """
+        Orchestrate the full crypto ETL pipeline.
+
+        Pipeline order:
+        1. Extract data from CoinGecko
+        2. Validate the API response
+        3. Transform nested JSON into database-ready rows
+        4. Load rows into PostgreSQL
+        5. Generate a report from stored database data
+        """
     try:
         logger.info("Starting crypto ETL pipeline.")
 

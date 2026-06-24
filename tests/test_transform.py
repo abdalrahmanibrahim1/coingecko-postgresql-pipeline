@@ -4,6 +4,10 @@ from src.transform import transform_data
 
 @pytest.fixture
 def valid_api_data():
+    """
+    Return a valid CoinGecko-style API response used as the base case
+    for transformation tests.
+    """
     return {
         "bitcoin": {
             "usd": 65000,
@@ -20,16 +24,27 @@ def valid_api_data():
     }
 
 def test_transform_data_returns_list(valid_api_data):
+    """ 
+    transform_data should return a list because each item represents
+    one database-ready row. """
     rows = transform_data(valid_api_data)
 
     assert isinstance(rows, list)
 
 def test_transform_data_returns_two_rows(valid_api_data):
+    """ 
+    The API response contains two coins, so the transformation should
+    produce two rows.
+    """
     rows = transform_data(valid_api_data)
 
     assert len(rows) == 2
 
 def test_transform_data_bitcoin_row(valid_api_data):
+    """ 
+    Confirm that the Bitcoin API data is mapped to the expected database 
+    fields and converted timestamp types. 
+    """
     rows = transform_data(valid_api_data)
     bitcoin_row = next(row for row in rows if row["symbol"] =="BTC")
 
@@ -42,6 +57,10 @@ def test_transform_data_bitcoin_row(valid_api_data):
     assert isinstance(bitcoin_row["ingestion_time"], datetime)
 
 def test_transform_data_ethereum_row(valid_api_data):
+    """ 
+    Confirm that the Ethereum API data is mapped to the expected database
+    fields and converted timestamp types.
+    """
     rows = transform_data(valid_api_data)
     ethereum_row = next(row for row in rows if row["symbol"] == "ETH")
 

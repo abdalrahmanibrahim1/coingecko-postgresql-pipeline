@@ -4,12 +4,17 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-
 def get_latest_bitcoin_price():
+    """
+    Return the latest Bitcoin price snapshot.
+
+    Rows are ordered by ingestion_time because the latest report should use
+    the most recent pipeline run.
+    """
     conn = get_connection()
     cursor = conn.cursor()    
     cursor.execute("""
-        SELECT coin_name, price_usd, snapshot_time
+        SELECT coin_name, price_usd, snapshot_time, ingestion_time
         FROM crypto_prices
         WHERE coin_name = 'Bitcoin'
         ORDER BY ingestion_time DESC
@@ -24,10 +29,16 @@ def get_latest_bitcoin_price():
 
 
 def get_latest_ethereum_price():
+    """
+    Return the latest Ethereum price snapshot.
+
+    Rows are ordered by ingestion_time because the latest report should use
+    the most recent pipeline run.
+    """
     conn = get_connection()
     cursor = conn.cursor()    
     cursor.execute("""
-        SELECT coin_name, price_usd, snapshot_time
+        SELECT coin_name, price_usd, snapshot_time, ingestion_time
         FROM crypto_prices
         WHERE coin_name = 'Ethereum'
         ORDER BY ingestion_time DESC
@@ -41,6 +52,9 @@ def get_latest_ethereum_price():
     return result
 
 def get_highest_prices_by_coin():
+    """
+    Return the highest recorded USD price for each coin across all stored snapshots.
+    """
     conn = get_connection()
     cursor = conn.cursor()    
     cursor.execute("""
@@ -57,6 +71,9 @@ def get_highest_prices_by_coin():
     return result
 
 def get_average_prices_by_coin():
+    """
+    Return the average USD price for each coin across all stored snapshots.
+    """
     conn = get_connection()
     cursor = conn.cursor()    
     cursor.execute("""
@@ -74,6 +91,12 @@ def get_average_prices_by_coin():
 
 
 def get_daily_statistics():
+    """
+    Return daily min, max, and average prices for each coin.
+
+    DATE(snapshot_time) groups API snapshots by calendar day so the report
+    can summarize historical price movement by date.
+    """
     conn = get_connection()
     cursor = conn.cursor()    
     cursor.execute("""
@@ -94,8 +117,17 @@ def get_daily_statistics():
     conn.close()
     return result
 
+def format_datetime(value):
+    """Format database timestamps without microseconds for report output."""
+    return value.strftime("%Y-%m-%d %H:%M:%S")
 
 def generate_report():
+    """
+    Generate a human-readable crypto price report from PostgreSQL query results.
+
+    The report is written to reports/crypto_report.txt so it can be viewed
+    after local or Docker pipeline runs.
+    """
     latest_bitcoin = get_latest_bitcoin_price()
     latest_ethereum = get_latest_ethereum_price()
     highest_prices = get_highest_prices_by_coin()
@@ -108,15 +140,17 @@ def generate_report():
     lines.append("===================")
     lines.append("")
 
-    coin_name, price, snapshot_time = latest_bitcoin
+    coin_name, price, snapshot_time, ingestion_time = latest_bitcoin
     lines.append(f"Latest {coin_name} price: ${price:,.2f}")
     lines.append(f"API snapshot time: {snapshot_time}")
+    lines.append(f"Ingested at: {format_datetime(ingestion_time)}")
 
     lines.append("")
 
-    coin_name, price, snapshot_time = latest_ethereum
+    coin_name, price, snapshot_time, ingestion_time = latest_ethereum
     lines.append(f"Latest {coin_name} price: ${price:,.2f}")
     lines.append(f"API snapshot time: {snapshot_time}")
+    lines.append(f"Ingested at: {format_datetime(ingestion_time)}")
 
     lines.append("")
     lines.append("Highest Recorded Prices")
@@ -149,5 +183,3 @@ def generate_report():
     report_path.write_text("\n".join(lines), encoding="utf-8")
 
     logger.info("Report generated: %s", report_path)
-if __name__ == "__main__":
-    generate_report()

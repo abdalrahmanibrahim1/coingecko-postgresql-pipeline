@@ -1,4 +1,14 @@
 def validate_data(data):
+    """
+    Validate the CoinGecko API response before transformation.
+
+    Expected response format:
+    - top-level object must be a dictionary
+    - coins must be exactly bitcoin and ethereum
+    - each coin must contain the required market fields
+    - required field values must be numeric
+    - numeric values must be non-negative
+    """
     required_coins = {"bitcoin", "ethereum"}
     required_fields = ["usd", "usd_market_cap", "usd_24h_vol", "last_updated_at"]
 
@@ -33,5 +43,3 @@ def validate_data(data):
                 raise ValueError(
                     f"Invalid API response: field '{field}' for '{coin}' cannot be negative."
                 )
-
-

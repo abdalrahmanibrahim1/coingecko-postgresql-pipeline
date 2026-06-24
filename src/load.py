@@ -3,9 +3,14 @@ import psycopg2
 from dotenv import load_dotenv
 
 def get_connection():
+    """
+    Create a PostgreSQL connection using environment variables.
+
+    load_dotenv() supports local development by reading values from .env.
+    In Docker, the same variables are provided by docker-compose.yml.
+    """
 
     load_dotenv()
-
 
     conn = psycopg2.connect(
         host = os.getenv("DB_HOST"),
@@ -18,9 +23,20 @@ def get_connection():
     return conn
 
 def insert_crypto_prices(rows):
+    """
+    Insert transformed crypto price rows into PostgreSQL.
+
+    Each row is a dictionary produced by transform_data() and matches
+    the crypto_prices table columns.
+
+    snapshot_time represents the API's as-of time.
+    ingestion_time represents when this pipeline run loaded the row.
+    """
     conn = get_connection()
     cursor = conn.cursor()
+
     for row in rows:
+        # Use parameterized SQL placeholders to safely pass values into PostgreSQL.
         cursor.execute("""
             INSERT INTO crypto_prices (
                 coin_name,
@@ -42,9 +58,7 @@ def insert_crypto_prices(rows):
                 row["ingestion_time"],
             )
         )
+
     conn.commit()
     cursor.close()
     conn.close()
-
-if __name__ == "__main__":
-    pass

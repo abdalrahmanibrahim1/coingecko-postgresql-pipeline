@@ -1,12 +1,21 @@
+# Do not copy Git history into the Docker build context.
 .git
 .git/
+
+# Do not copy the local Python virtual environment.
 .venv
 .venv/
+
+# Do not copy Python/cache files.
 __pycache__
 __pycache__/
 .pytest_cache
 .pytest_cache/
-.env
 *.pyc
+
+# Do not copy local secrets into the Docker image.
+.env
+
+# Do not copy generated output/data files into the image.
 reports/*.txt
 data/*
